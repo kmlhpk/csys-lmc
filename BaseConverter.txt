@@ -1,0 +1,120 @@
+# The general flow of the program is as follows: the input number is split into its base-a digits using integer divisions by 10 and the resulting remainders. These numbers are then used as multiples of base a and converted into a base-10 representation. The program then loops back to the beginning, changing the integer divisor to the new base b and the multiplier to 10, to acquire the base-b digits and put them in their correct positions/place-values in the 3-digit representation.
+
+# The program deals with input and target bases of 2 and above. When either base is 0 or 1, the answer is too large for the accumulator, the digits are invalid for the given base, or a representation using only the symbols 0-9 is impossible, the error code 999 is returned. 
+
+# The worst valid base-to-base cases (>900, b10 to b10) complete in ~2100 cycles, while the vast majority are considerably quicker. The worst overflow case (999 b10 to b2) takes just over 7000 cycles, with most taking 5000 or fewer. The most ridiculous input, 007 from b999 to b2, takes ~8200 cycles. 
+
+# Note: Program doesn't take target base input until second loop, which is why invalid inputs sometimes take a while to output 999
+
+# MAIN CODE
+# Assigns inputs to appropriate vars according to loop number, and resets necessary vars.
+# Counter reset and initial inputs
+	LDA	HLT
+	STO	counter
+	IN
+	STO	dig3
+	IN
+	STO	base
+# Base 0/1 checking
+	LDA	ONE
+	SUB	base
+	BRP	wrong
+# Setting initial divisor to 10
+	LDA	TEN
+	STO	divi
+# Skips over loop-2-exclusive code 
+	BR	round1
+round2	IN	
+	STO	divi
+	LDA	ONE
+# Sets counter to one - skips the final BRZ on loop 2, allowing program to end
+	STO	counter
+	SUB	divi
+	BRP	wrong
+	LDA	TEN
+	STO	base
+# Resets digits 1 and 2
+round1	LDA	HLT	
+	STO	dig2
+	STO	dig1
+
+# Integer division loop on input number - result -> dig2, remainder -> dig3
+mod1	LDA	dig3
+	SUB	divi
+	BRP	nDone1
+	BR	mod2
+nDone1	STO	dig3
+	LDA	dig2
+	ADD	ONE
+	STO	dig2
+	BR	mod1
+
+# Repeats integer division on dig2 - result -> dig1, remainder -> dig2
+mod2	LDA	dig2
+	SUB	divi
+	BRP	nDone2
+	BR	checks
+nDone2	STO	dig2
+	LDA	dig1
+	ADD	ONE
+	STO	dig1
+	BR	mod2
+
+# Checks digit validity and stops output overflow, by checking digits against base &/or divisor
+checks	LDA	dig1
+	SUB	base
+	BRP	wrong
+	LDA	dig1
+	SUB	divi
+	BRP	wrong
+	LDA	dig2
+	SUB	base
+	BRP	wrong
+	LDA	dig3
+	SUB	base
+	BRP	wrong
+
+# Builds up output using Horner's form to skip squaring: ((dig1*b+dig2)*b)+dig3
+# d1*b+d2; by adding b to d2, d1 times
+mult	LDA	dig1
+	BRZ	mult2
+	SUB	ONE
+	STO	dig1
+	LDA	dig2
+	ADD	base
+	STO	dig2
+	BR	mult
+
+# " *b+d3; by adding above result to d3, b times
+mult2	LDA	base
+	BRZ	next
+	SUB	ONE
+	STO	base
+	LDA	dig3
+	ADD	dig2
+	STO	dig3
+	BR	mult2
+
+# Jumps to beginning, but only on the first loop
+next	LDA	counter
+	BRZ	round2
+
+# End of program - outputs error code when (dig1 or dig2 or dig3) >= b, b < 2, 0-9 representation impossible, or output > 999 - otherwise, outputs correct answer and halts
+end	LDA	dig3
+	OUT
+HLT	HLT
+wrong	LDA	ERROR
+	OUT
+
+# CONST INIT (Also used as halt for errors)
+ONE	DAT	001
+TEN	DAT	010
+ERROR	DAT	999
+
+# VAR INIT
+dig3	DAT	000
+dig2	DAT	000
+dig1	DAT	000
+base	DAT	000
+divi	DAT	000
+counter	DAT	000
